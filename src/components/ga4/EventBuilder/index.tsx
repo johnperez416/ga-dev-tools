@@ -14,22 +14,25 @@
 
 import React from "react"
 
-import makeStyles from "@material-ui/core/styles/makeStyles"
-import Typography from "@material-ui/core/Typography"
-import TextField from "@material-ui/core/TextField"
-import IconButton from "@material-ui/core/IconButton"
-import Tooltip from "@material-ui/core/Tooltip"
-import Autocomplete from "@material-ui/lab/Autocomplete"
-import Refresh from "@material-ui/icons/Refresh"
+import { styled } from '@mui/material/styles';
+
+import Typography from "@mui/material/Typography"
+import TextField from "@mui/material/TextField"
+import IconButton from "@mui/material/IconButton"
+import Tooltip from "@mui/material/Tooltip"
+import Autocomplete from "@mui/material/Autocomplete"
+import Refresh from "@mui/icons-material/Refresh"
+import { Error as ErrorIcon } from "@mui/icons-material"
 
 import LinkedTextField from "@/components/LinkedTextField"
+import TextBox from "@/components/TextBox"
 import LabeledCheckbox from "@/components/LabeledCheckbox"
-import Grid from "@material-ui/core/Grid"
-import Switch from "@material-ui/core/Switch"
+import Grid from "@mui/material/Grid"
+import Switch from "@mui/material/Switch"
 import ExternalLink from "@/components/ExternalLink"
 import { Url } from "@/constants"
 import WithHelpText from "@/components/WithHelpText"
-import useFormStyles from "@/hooks/useFormStyles"
+import { TooltipIconButton } from "@/components/Buttons"
 import useEvent from "./useEvent"
 import Parameters from "./Parameters"
 import useInputs from "./useInputs"
@@ -38,24 +41,95 @@ import { eventsForCategory } from "./event"
 import useUserProperties from "./useUserProperties"
 import Items from "./Items"
 import ValidateEvent from "./ValidateEvent"
+import { PlainButton } from "@/components/Buttons"
+import { useEffect } from "react"
+
+const PREFIX = 'EventBuilder';
+
+const classes = {
+  clientSwitch: `${PREFIX}-clientSwitch`,
+  unifiedParameters: `${PREFIX}-unifiedParameters`,
+  fullWidth: `${PREFIX}-fullWidth`,
+  parameterPair: `${PREFIX}-parameterPair`,
+  validateHeading: `${PREFIX}-validateHeading`,
+  parameters: `${PREFIX}-parameters`,
+  form: `${PREFIX}-form`,
+  items: `${PREFIX}-items`
+};
+
+const Root = styled('div')((
+  {
+    theme
+  }
+) => ({
+  [`& .${classes.clientSwitch}`]: {
+    marginBottom: theme.spacing(2),
+  },
+
+  [`& .${classes.unifiedParameters}`]: {},
+
+  [`& .${classes.fullWidth}`]: {
+    width: "100%",
+  },
+
+  [`& .${classes.parameterPair}`]: {
+    display: "flex",
+    "& > *:not(:first-child)": {
+      marginLeft: theme.spacing(1),
+    },
+  },
+
+  [`& .${classes.validateHeading}`]: {
+    marginTop: theme.spacing(3),
+  },
+
+  [`& .${classes.parameters}`]: {
+    "&> :not(:first-child)": {
+      marginTop: theme.spacing(1),
+    },
+  },
+
+  [`& .${classes.form}`]: {
+    maxWidth: "80ch",
+  },
+
+  [`& .${classes.items}`]: {
+    "&> :not(:first-child)": {
+      marginTop: theme.spacing(3),
+    },
+    "&> :last-child": {
+      marginTop: theme.spacing(1),
+    },
+  }
+}));
 
 export enum Label {
-  APISecret = "api_secret",
+  APISecret = "api secret",
 
-  FirebaseAppID = "firebase_app_id",
-  AppInstanceID = "app_instance_id",
+  FirebaseAppID = "firebase app id",
+  AppInstanceID = "app instance id",
 
-  MeasurementID = "measurement_id",
-  ClientID = "client_id",
+  MeasurementID = "measurement id",
+  ClientID = "client id",
 
-  UserId = "user_id",
+  UserId = "user id",
 
-  EventCategory = "event_category",
-  EventName = "event_name",
-  TimestampMicros = "timestamp_micros",
-  NonPersonalizedAds = "non_personalized_ads",
+  EventCategory = "event category",
+  EventName = "event name",
+  TimestampMicros = "timestamp micros",
+  NonPersonalizedAds = "non personalized ads",
 
   Payload = "payload",
+
+  // event params
+  Coupon = '#/events/0/params/coupon',
+  Currency = '#/events/0/params/currency',
+  Value = '#/events/0/params/value',
+  ItemId = '#/events/0/params/item_id',
+  TransactionId = '#/events/0/params/transaction_id',
+  Affiliation = '#/events/0/params/affiliation',
+  Shipping = '#/events/0/params/shipping',
+  Tax = '#/events/0/params/tax',
 }
 
 const ga4MeasurementProtocol = (
@@ -64,59 +138,29 @@ const ga4MeasurementProtocol = (
   </ExternalLink>
 )
 
-const useStyles = makeStyles(theme => ({
-  clientSwitch: {
-    marginBottom: theme.spacing(2),
-  },
-  unifiedParameters: {},
-  fullWidth: {
-    width: "100%",
-  },
-  parameterPair: {
-    display: "flex",
-    "& > *:not(:first-child)": {
-      marginLeft: theme.spacing(1),
-    },
-  },
-  validateHeading: {
-    marginTop: theme.spacing(3),
-  },
-  parameters: {
-    "&> :not(:first-child)": {
-      marginTop: theme.spacing(1),
-    },
-  },
-  items: {
-    "&> :not(:first-child)": {
-      marginTop: theme.spacing(3),
-    },
-    "&> :last-child": {
-      marginTop: theme.spacing(1),
-    },
-  },
-}))
-
+export type EventPayload = {
+  eventName: string
+  type: EventType
+  parameters: Parameter[]
+  items: Parameter[][] | undefined
+  userProperties: Parameter[]
+  timestamp_micros: string | undefined
+  non_personalized_ads: boolean | undefined
+  clientIds: ClientIds
+  instanceId: InstanceId
+  api_secret: string
+  useTextBox: boolean
+  payloadObj: any
+}
 export const EventCtx = React.createContext<
-  | {
-      eventName: string
-      type: EventType
-      parameters: Parameter[]
-      items: Parameter[][] | undefined
-      userProperties: Parameter[]
-      timestamp_micros: string | undefined
-      non_personalized_ads: boolean | undefined
-      clientIds: ClientIds
-      instanceId: InstanceId
-      api_secret: string
-    }
+  | EventPayload
   | undefined
 >(undefined)
 export const ShowAdvancedCtx = React.createContext(false)
 export const UseFirebaseCtx = React.createContext(false)
 
 const EventBuilder: React.FC = () => {
-  const formClasses = useFormStyles()
-  const classes = useStyles()
+
   const [showAdvanced, setShowAdvanced] = React.useState(false)
   const {
     userProperties,
@@ -124,8 +168,9 @@ const EventBuilder: React.FC = () => {
     addStringUserProperty,
     removeUserProperty,
     setUserPropertyName,
-    setUserPopertyValue,
+    setUserPropertyValue,
   } = useUserProperties()
+
   const {
     parameters,
     items,
@@ -153,6 +198,14 @@ const EventBuilder: React.FC = () => {
   const {
     useFirebase,
     setUseFirebase,
+    useTextBox,
+    setUseTextBox,
+    inputPayload,
+    setInputPayload,
+    payloadObj,
+    setPayloadObj,
+    payloadErrors,
+    setPayloadErrors,
     category,
     setCategory,
     api_secret,
@@ -173,10 +226,32 @@ const EventBuilder: React.FC = () => {
     setNonPersonalizedAds,
   } = useInputs(categories)
 
+  const formatPayload = React.useCallback( () => {
+    try {
+      if (inputPayload) {
+        let payload = JSON.parse(inputPayload) as object
+        setPayloadObj(JSON.stringify(payload, null, '\t'))
+        setPayloadErrors('')
+      }
+      else {
+        setPayloadErrors('Empty Payload')
+        setPayloadObj({})
+      }
+
+    } catch (err: any) {
+      setPayloadErrors(err.message)
+      setPayloadObj({})
+    }
+  }, [inputPayload, setPayloadErrors, setPayloadObj])
+
+  useEffect(() => {
+    formatPayload()
+  }, [inputPayload, formatPayload])
+
   return (
-    <div>
+    <Root>
       <Typography variant="h3">Overview</Typography>
-      <Typography>
+      <Typography component={'span'}>
         The GA4 Event Builder allows you to create, validate, and send events
         using the {ga4MeasurementProtocol}.
       </Typography>
@@ -200,6 +275,10 @@ const EventBuilder: React.FC = () => {
               checked={useFirebase}
               onChange={e => {
                 setUseFirebase(e.target.checked)
+
+                if (!e.target.checked) {
+                  setUseTextBox(false)
+                }
               }}
               name="use firebase"
               color="primary"
@@ -213,7 +292,6 @@ const EventBuilder: React.FC = () => {
         After choosing a client, fill out the inputs below.
       </Typography>
 
-      <section className={formClasses.form}>
         <LinkedTextField
           required
           href="https://developers.google.com/analytics/devguides/collection/protocol/ga4/reference#api_secret"
@@ -282,145 +360,203 @@ const EventBuilder: React.FC = () => {
           helperText="The unique identifier for a given user."
           onChange={setUserId}
         />
+    {
 
-        <Autocomplete<Category, false, true, true>
-          data-testid={Label.EventCategory}
-          fullWidth
-          disableClearable
-          autoComplete
-          autoHighlight
-          autoSelect
-          options={Object.values(Category)}
-          getOptionLabel={category => category}
-          value={category}
-          onChange={(_event, value) => {
-            setCategory(value as Category)
-            const events = eventsForCategory(value as Category)
-            if (events.length > 0) {
-              setType(events[0].type)
+        <>
+          <WithHelpText
+            notched
+            shrink
+            label="validation method"
+            className="formatTab"
+          >
+            <Grid component="label" container alignItems="center" spacing={1}>
+              <Grid item>form</Grid>
+              <Grid item>
+                <Switch
+                  data-testid="use form"
+                  checked={useTextBox}
+                  onChange={e => {
+                    setUseTextBox(e.target.checked)
+                  }}
+                  name="use form"
+                  color="primary"
+                />
+              </Grid>
+              <Grid item>text box</Grid>
+            </Grid>
+          </WithHelpText>
+
+          <br/>
+        </>
+
+    }
+
+    { useTextBox &&
+        <>
+        <TextBox
+          required
+          href="https://developers.google.com/analytics/devguides/collection/protocol/ga4/reference?client_type=firebase#payload_post_body"
+          linkTitle="JSON Payload Documentation"
+          value={Object.keys(payloadObj).length > 0 ? payloadObj : inputPayload}
+          label={Label.Payload}
+          onChange={(input) => {
+              setInputPayload(input)
+              formatPayload()
             }
-          }}
-          renderInput={params => (
-            <TextField
-              {...params}
-              label={Label.EventCategory}
-              id={Label.EventCategory}
-              size="small"
-              variant="outlined"
-              helperText="The category for the event"
-            />
-          )}
+          }
         />
-        {type === EventType.CustomEvent ? (
-          <TextField
-            fullWidth
-            variant="outlined"
-            size="small"
-            label={Label.EventName}
-            id={Label.EventName}
-            value={eventName}
-            helperText="The name of the event"
-            onChange={e => {
-              setEventName(e.target.value)
-            }}
-          />
-        ) : (
-          <Autocomplete<EventType, false, true, true>
-            data-testid={Label.EventName}
+
+        <br/>
+
+        <br/>
+
+        <PlainButton small
+          onClick={formatPayload}
+        >
+          format payload
+        </PlainButton>
+
+        { payloadErrors && (
+            <TooltipIconButton
+              tooltip={payloadErrors}
+              placement={'top'}
+            >
+              <ErrorIcon
+                style={{color: 'red'}}
+              />
+            </TooltipIconButton>
+        )}
+      </>
+    }
+
+    { !useTextBox &&
+      <div>
+        <section className={classes.form}>
+
+
+          <Autocomplete<Category, false, true, true>
+            data-testid={Label.EventCategory}
             fullWidth
             disableClearable
             autoComplete
             autoHighlight
             autoSelect
-            options={eventsForCategory(category).map(e => e.type)}
-            getOptionLabel={eventType => eventType}
-            value={type}
+            options={Object.values(Category)}
+            getOptionLabel={category => category}
+            value={category}
             onChange={(_event, value) => {
-              setType(value as EventType)
+              setCategory(value as Category)
+              const events = eventsForCategory(value as Category)
+              if (events.length > 0) {
+                setType(events[0].type)
+              }
             }}
             renderInput={params => (
               <TextField
                 {...params}
-                label={Label.EventName}
-                id={Label.EventName}
+                label={Label.EventCategory}
+                id={Label.EventCategory}
                 size="small"
                 variant="outlined"
-                helperText={
-                  <>
-                    The name of the event. See{" "}
-                    <ExternalLink
-                      href={`https://developers.google.com/analytics/devguides/collection/protocol/ga4/reference/events#${type}`}
-                    >
-                      {type}
-                    </ExternalLink>{" "}
-                    on devsite.
-                  </>
-                }
+                helperText="The category for the event"
               />
             )}
           />
-        )}
-        <LinkedTextField
-          label={Label.TimestampMicros}
-          id={Label.TimestampMicros}
-          linkTitle="See timestamp_micros on devsite."
-          href={`https://developers.google.com/analytics/devguides/collection/protocol/ga4/reference?client_type=${
-            useFirebase ? "firebase" : "gtag"
-          }#timestamp_micros`}
-          value={timestamp_micros || ""}
-          onChange={setTimestampMicros}
-          helperText="The timestamp of the event."
-          extraAction={
-            <Tooltip title="Set to now.">
-              <IconButton
-                size="small"
-                onClick={() => {
-                  setTimestampMicros((new Date().getTime() * 1000).toString())
-                }}
-              >
-                <Refresh />
-              </IconButton>
-            </Tooltip>
-          }
-        />
+          {type === EventType.CustomEvent ? (
+            <TextField
+              fullWidth
+              variant="outlined"
+              size="small"
+              label={Label.EventName}
+              id={Label.EventName}
+              value={eventName}
+              helperText="The name of the event"
+              onChange={e => {
+                setEventName(e.target.value)
+              }}
+            />
+          ) : (
+            <Autocomplete<EventType, false, true, true>
+              data-testid={Label.EventName}
+              fullWidth
+              disableClearable
+              autoComplete
+              autoHighlight
+              autoSelect
+              options={eventsForCategory(category).map(e => e.type)}
+              getOptionLabel={eventType => eventType}
+              value={type}
+              onChange={(_event, value) => {
+                setType(value as EventType)
+              }}
+              renderInput={params => (
+                <TextField
+                  {...params}
+                  label={Label.EventName}
+                  id={Label.EventName}
+                  size="small"
+                  variant="outlined"
+                  helperText={
+                    <>
+                      The name of the event.
+                    </>
+                  }
+                />
+              )}
+            />
+          )}
+          <LinkedTextField
+            label={Label.TimestampMicros}
+            id={Label.TimestampMicros}
+            linkTitle="See timestamp_micros on devsite."
+            href={`https://developers.google.com/analytics/devguides/collection/protocol/ga4/reference?client_type=${
+              useFirebase ? "firebase" : "gtag"
+            }#timestamp_micros`}
+            value={timestamp_micros || ""}
+            onChange={setTimestampMicros}
+            helperText="The timestamp of the event."
+            extraAction={
+              <Tooltip title="Set to now.">
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    setTimestampMicros((new Date().getTime() * 1000).toString())
+                  }}
+                >
+                  <Refresh />
+                </IconButton>
+              </Tooltip>
+            }
+          />
 
-        <WithHelpText
-          helpText={
-            <>
-              Check to indicate events should not be used for personalized ads.
-              See{" "}
-              <ExternalLink
-                href={`https://developers.google.com/analytics/devguides/collection/protocol/ga4/reference?client_type=${
-                  useFirebase ? "firebase" : "gtag"
-                }#non_personalized_ads`}
-              >
-                non_personalized_ads
-              </ExternalLink>{" "}
-              on devsite.
-            </>
-          }
-        >
-          <LabeledCheckbox
-            checked={non_personalized_ads}
-            setChecked={setNonPersonalizedAds}
-            id={Label.NonPersonalizedAds}
+          <WithHelpText
+            helpText={
+              <>
+                Check to indicate events should not be used for personalized ads.
+              </>
+            }
           >
-            {Label.NonPersonalizedAds}
-          </LabeledCheckbox>
-        </WithHelpText>
-      </section>
+            <LabeledCheckbox
+              checked={non_personalized_ads}
+              setChecked={setNonPersonalizedAds}
+              id={Label.NonPersonalizedAds}
+            >
+              {Label.NonPersonalizedAds}
+            </LabeledCheckbox>
+          </WithHelpText>
+        </section>
 
-      <Typography variant="h4">Event details</Typography>
-      <Typography>
-        Finally, specify the parameters to send with the event. By default, only
-        recommended parameters for the event will appear here. Check "show
-        advanced options" to add custom parameters or user properties.
-      </Typography>
-      <LabeledCheckbox checked={showAdvanced} onChange={setShowAdvanced}>
-        show advanced options
-      </LabeledCheckbox>
+        <Typography variant="h4">Event details</Typography>
+        <Typography>
+          Finally, specify the parameters to send with the event. By default, only
+          recommended parameters for the event will appear here. Check "show
+          advanced options" to add custom parameters or user properties.
+        </Typography>
+        <LabeledCheckbox checked={showAdvanced} onChange={setShowAdvanced}>
+          show advanced options
+        </LabeledCheckbox>
 
-      <section className={formClasses.form}>
+      <section className={classes.form}>
         <ShowAdvancedCtx.Provider
           value={showAdvanced || type === EventType.CustomEvent}
         >
@@ -450,24 +586,24 @@ const EventBuilder: React.FC = () => {
               />
             </>
           )}
-
-          {(showAdvanced ||
-            (userProperties !== undefined && userProperties.length !== 0)) && (
-            <>
-              <Typography variant="h5">User properties</Typography>
-              <Parameters
-                removeParam={removeUserProperty}
-                parameters={userProperties}
-                addStringParam={addStringUserProperty}
-                addNumberParam={addNumberUserProperty}
-                setParamName={setUserPropertyName}
-                setParamValue={setUserPopertyValue}
-              />
-            </>
-          )}
-        </ShowAdvancedCtx.Provider>
-      </section>
-
+            {(showAdvanced ||
+              (userProperties !== undefined && userProperties.length !== 0)) && (
+              <>
+                <Typography variant="h5">User properties</Typography>
+                <Parameters
+                  removeParam={removeUserProperty}
+                  parameters={userProperties}
+                  addStringParam={addStringUserProperty}
+                  addNumberParam={addNumberUserProperty}
+                  setParamName={setUserPropertyName}
+                  setParamValue={setUserPropertyValue}
+                />
+              </>
+            )}
+          </ShowAdvancedCtx.Provider>
+        </section>
+      </div>
+    }
       <Typography variant="h3" className={classes.validateHeading}>
         Validate & Send event
       </Typography>
@@ -484,6 +620,8 @@ const EventBuilder: React.FC = () => {
             userProperties,
             timestamp_micros,
             non_personalized_ads,
+            useTextBox,
+            payloadObj,
             instanceId: useFirebase ? { firebase_app_id } : { measurement_id },
             api_secret: api_secret!,
           }}
@@ -495,11 +633,14 @@ const EventBuilder: React.FC = () => {
             measurement_id={measurement_id || ""}
             app_instance_id={app_instance_id || ""}
             firebase_app_id={firebase_app_id || ""}
+            formatPayload={formatPayload}
+            payloadErrors={payloadErrors}
+            useTextBox={useTextBox}
           />
         </EventCtx.Provider>
       </UseFirebaseCtx.Provider>
-    </div>
-  )
+    </Root>
+  );
 }
 
 export default EventBuilder

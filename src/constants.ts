@@ -52,6 +52,8 @@ export enum Url {
   enhancedEcommerceDemo = "https://enhancedecommerce.appspot.com/",
   gaDevToolsGitHub = "https://github.com/googleanalytics/ga-dev-tools",
   gaDevToolsGitHubNewIssue = "https://github.com/googleanalytics/ga-dev-tools/issues/new?assignees=&labels=&template=bug_report.md&title=",
+
+  gaDevToolsHatsSurvey = "https://forms.gle/khM6TxwTpjRfkPk69",
   gaDevToolsGitHubNewFeatureRequest = "https://github.com/googleanalytics/ga-dev-tools/issues/new?assignees=&labels=&template=feature_request.md&title=",
   gaDevsite = "http://developers.google.com/analytics",
   gaDevsiteHelp = "http://developers.google.com/analytics/help/",
@@ -88,13 +90,12 @@ export enum StorageKey {
   ga4AccountSummaries = "//ga4-account-summaries",
   ga4WebStreams = "//ga4-web-streams",
 
-  // Acount Explorer
+  // Account Explorer
   accountExplorerAPV = "/account-explorer/apv",
 
   // GA4 Dimensions and metrics explorer
   ga4DimensionsMetrics = "/ga4/dimensions-metrics/",
   ga4DimensionsMetricsExplorerAPS = "/ga4/dimensions-metrics-explorer/aps",
-  ga4DimensionsMetricsSearch = "/ga4/dimensions-metrics-explorer/search",
   ga4DimensionsMetricsFields = "/ga4/dimensions-metrics-explorer/fields",
   ga4DimensionsMetricsAccountSummaries = "/ga4/dimensions-metrics-explorer/account-summaries",
   ga4DimensionsMetricsSelectedAccount = "/ga4/dimensions-metrics-explorer/selected-account",
@@ -248,6 +249,9 @@ export enum StorageKey {
   ga4EventBuilderItems = "ga4/event-builder/items",
   ga4EventBuilderEventName = "ga4/event-builder/event-name",
   ga4EventBuilderUserProperties = "ga4/event-builder/user-properties",
+  ga4EventBuilderPayload = "ga4/event-builder/payload",
+  ga4EventBuilderPayloadObj = "ga4/event-builder/payload-obj",
+  ga4EventBuilderPayloadError = "ga4/event-builder/payload-error",
 }
 
 export const EventAction = {

@@ -14,19 +14,30 @@
 
 import * as React from "react"
 
-import Typography from "@material-ui/core/Typography"
-import { makeStyles } from "@material-ui/core/styles"
+import { styled } from '@mui/material/styles';
+
+import Typography from "@mui/material/Typography"
 import { StaticImage } from "gatsby-plugin-image"
 
 import { Url } from "@/constants"
 import ExternalLink from "@/components/ExternalLink"
 
-const useStyles = makeStyles({ partnersImage: { maxWidth: "600px" } })
+const PREFIX = 'IndexPage';
+
+const classes = {
+  partnersImage: `${PREFIX}-partnersImage`
+};
+
+const Root = styled('div')({
+  [`& .${classes.partnersImage}`]: {
+    maxWidth: "600px"
+  }
+});
 
 const IndexPage: React.FC = () => {
-  const classes = useStyles()
+
   return (
-    <>
+    (<Root>
       <StaticImage
         className={classes.partnersImage}
         alt="GA partners logo"
@@ -49,12 +60,6 @@ const IndexPage: React.FC = () => {
         . We encourage you to take a look if you'd like to see how anything is
         done.
       </Typography>
-      <Typography variant="h3">Support for UA & GA4</Typography>
-      <Typography variant="body1">
-        There is support for both Universal Analytics (UA) and Google Analytics
-        4 (GA4). Click the toggle in the nav bar to switch between the UA and
-        GA4 versions of the site.
-      </Typography>
       <Typography variant="h3">Demos</Typography>
       <Typography variant="body1">
         Live demos to help you learn about Google Analytics features.
@@ -66,7 +71,7 @@ const IndexPage: React.FC = () => {
       </Typography>
       <Typography variant="h3">Tools</Typography>
       <Typography variant="body1">
-        Tools to showcase how Google Analytics can be extendend with custom
+        Tools to showcase how Google Analytics can be extended with custom
         solutions.
       </Typography>
       <Typography variant="body1" component="ul">
@@ -83,6 +88,13 @@ const IndexPage: React.FC = () => {
       </Typography>
       <Typography variant="h3">For this site</Typography>
       <Typography variant="body1" component="ul">
+        <li>
+          Fill out a{" "}
+          <ExternalLink href={Url.gaDevToolsHatsSurvey}>
+            brief customer survey
+          </ExternalLink>{" "}
+          and let us know what you think!
+        </li>
         <li>
           You may report bugs by{" "}
           <ExternalLink href={Url.gaDevToolsGitHubNewIssue}>
@@ -115,8 +127,8 @@ const IndexPage: React.FC = () => {
           questions answered.
         </li>
       </Typography>
-    </>
-  )
+    </Root>)
+  );
 }
 
 export default IndexPage

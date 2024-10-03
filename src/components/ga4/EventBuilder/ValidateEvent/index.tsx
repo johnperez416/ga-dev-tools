@@ -14,39 +14,82 @@
 
 import React, { useContext } from "react"
 
-import { makeStyles } from "@material-ui/core/styles"
+import { styled } from '@mui/material/styles';
+
 import clsx from "classnames"
 
-import useFormStyles from "@/hooks/useFormStyles"
 import useValidateEvent from "./useValidateEvent"
 import Loadable from "@/components/Loadable"
-import Typography from "@material-ui/core/Typography"
+import Typography from "@mui/material/Typography"
 import { PAB, PlainButton } from "@/components/Buttons"
-import { Check, Warning, Error as ErrorIcon } from "@material-ui/icons"
+import { Check, Warning, Error as ErrorIcon } from "@mui/icons-material"
 import PrettyJson from "@/components/PrettyJson"
 import usePayload from "./usePayload"
 import { ValidationMessage } from "../types"
 import Spinner from "@/components/Spinner"
 import { EventCtx, Label } from ".."
-import { Card } from "@material-ui/core"
-import { green, red } from "@material-ui/core/colors"
+import { Card } from "@mui/material"
+import { green, red } from "@mui/material/colors"
 
-interface StyleProps {
+const PREFIX = 'ValidateEvent';
+
+interface TemplateProps {
+  heading: string
+  headingIcon?: JSX.Element
+  body: JSX.Element | string
+  validateEvent?: () => void
+  validationMessages?: ValidationMessage[]
+  sendToGA?: () => void
+  copyPayload?: () => void
+  copySharableLink?: () => void
   error?: boolean
   valid?: boolean
+  sent?: boolean
+  payloadErrors?: string | undefined
+  useTextBox?: boolean
 }
-const useStyles = makeStyles(theme => ({
-  template: {
+
+export interface ValidateEventProps {
+  measurement_id: string
+  app_instance_id: string
+  firebase_app_id: string
+  api_secret: string
+  client_id: string
+  user_id: string
+  formatPayload: () => void
+  payloadErrors: string | undefined
+  useTextBox: boolean
+}
+
+const classes = {
+  template: `${PREFIX}-template`,
+  payloadTitle: `${PREFIX}-payloadTitle`,
+  headers: `${PREFIX}-headers`,
+  heading: `${PREFIX}-heading`,
+  payload: `${PREFIX}-payload`,
+  form: `${PREFIX}-form`,
+  buttonRow: `${PREFIX}-buttonRow`
+};
+
+const Root = styled('div')((
+  {
+    theme
+  }
+) => ({
+  [`& .${classes.template}`]: {
     padding: theme.spacing(2),
   },
-  payloadTitle: {
+
+  [`& .${classes.payloadTitle}`]: {
     margin: theme.spacing(1, 0),
   },
-  headers: {
+
+  [`& .${classes.headers}`]: {
     ...theme.typography.body2,
     fontFamily: "monospace",
   },
-  heading: ({ error, valid }: StyleProps) => ({
+
+  [`& .${classes.heading}`]: ({ error, valid }: StyleProps) => ({
     backgroundColor: error ? red[300] : valid ? green[300] : "inherit",
     color: error
       ? theme.palette.getContrastText(red[300])
@@ -62,39 +105,38 @@ const useStyles = makeStyles(theme => ({
     },
     marginBottom: theme.spacing(2),
   }),
-  payload: {
-    fontSize: theme.typography.caption.fontSize,
-  },
-}))
 
-export interface ValidateEventProps {
-  measurement_id: string
-  app_instance_id: string
-  firebase_app_id: string
-  api_secret: string
-  client_id: string
-  user_id: string
+  [`& .${classes.form}`]: {
+    maxWidth: "80ch",
+  },
+
+  [`& .${classes.buttonRow}`]: {
+    display: "flex",
+    "&> *:not(:last-child)": {
+      marginRight: theme.spacing(1),
+    },
+  },
+
+  [`& .${classes.payload}`]: {
+    fontSize: theme.typography.caption.fontSize,
+  }
+}));
+
+interface StyleProps {
+  error?: boolean
+  valid?: boolean
 }
 
-const focusFor = (message: ValidationMessage) => {
+
+const focusFor = (message: ValidationMessage, useTextBox: boolean) => {
+  const { fieldPath } = message
   let id: string | undefined
-  switch (message.fieldPath) {
-    case "api_secret":
-      id = Label.APISecret
-      break
-    case "measurement_id":
-      id = Label.MeasurementID
-      break
-    case "firebase_app_id":
-      id = Label.FirebaseAppID
-      break
-    case "app_instance_id":
-      id = Label.AppInstanceID
-      break
-    case "client_id":
-      id = Label.ClientID
-      break
+  const labelValues: string[] = Object.values(Label)
+
+  if (labelValues.includes(fieldPath) && !useTextBox) {
+    id = fieldPath
   }
+
   if (id) {
     return (
       <PlainButton
@@ -110,19 +152,7 @@ const focusFor = (message: ValidationMessage) => {
   }
 }
 
-interface TemplateProps {
-  heading: string
-  headingIcon?: JSX.Element
-  body: JSX.Element | string
-  validateEvent?: () => void
-  validationMessages?: ValidationMessage[]
-  sendToGA?: () => void
-  copyPayload?: () => void
-  copySharableLink?: () => void
-  error?: boolean
-  valid?: boolean
-  sent?: boolean
-}
+
 const Template: React.FC<TemplateProps> = ({
   sent,
   heading,
@@ -135,36 +165,63 @@ const Template: React.FC<TemplateProps> = ({
   copySharableLink,
   error,
   valid,
+  payloadErrors,
+  useTextBox
 }) => {
-  const classes = useStyles({ error, valid })
-  const payload = usePayload()
-  const formClasses = useFormStyles()
+
   const { instanceId, api_secret } = useContext(EventCtx)!
+  const payload = usePayload()
   return (
     <Card
-      className={clsx(formClasses.form, classes.template)}
+      className={clsx(classes.form, classes.template)}
       data-testid="validate and send"
     >
       <Typography className={classes.heading} variant="h3">
         {headingIcon}
         {heading}
       </Typography>
-      {validationMessages !== undefined && (
+
+      {validationMessages !== undefined &&
+        (
+          (useTextBox && !payloadErrors) ||
+          !useTextBox
+        ) && (
         <ul>
           {validationMessages.map((message, idx) => (
-            <li key={idx}>
-              {focusFor(message)}
-              {message.description}
-            </li>
+            <div>
+              <li key={idx}>
+                {focusFor(message, useTextBox !== undefined && useTextBox)}
+                {message.description}
+                <br />
+                <a href={message.documentation} target='_blank' rel="noreferrer">Documentation</a>
+              </li>
+              <br/>
+              <br/>
+            </div>
           ))}
         </ul>
       )}
 
+      {useTextBox && payloadErrors && (
+        <div>
+          <ul>
+            <li>
+              JSON formatting error: <i>{payloadErrors}</i>
+            </li>
+          </ul>
+          <br/>
+          <br/>
+        </div>
+      )}
+
       {body}
 
-      <section className={formClasses.buttonRow}>
+      <section className={classes.buttonRow}>
         {validateEvent !== undefined && (
-          <PAB small onClick={validateEvent}>
+          <PAB small onClick={() => {
+            validateEvent()
+          }
+          }>
             validate event
           </PAB>
         )}
@@ -182,8 +239,11 @@ const Template: React.FC<TemplateProps> = ({
           </PlainButton>
         )}
       </section>
+
       <br />
+
       <Typography variant="h4">Request info</Typography>
+
       <Typography className={classes.headers}>
         POST /mp/collect?api_secret={api_secret}
         {instanceId.firebase_app_id &&
@@ -194,7 +254,9 @@ const Template: React.FC<TemplateProps> = ({
         HOST: www.google-analytics.com <br />
         Content-Type: application/json
       </Typography>
+
       <Typography variant="h5">Payload</Typography>
+
       <section data-testid="payload">
         <PrettyJson
           className={classes.payload}
@@ -207,7 +269,7 @@ const Template: React.FC<TemplateProps> = ({
   )
 }
 
-const ValidateEvent: React.FC<ValidateEventProps> = () => {
+const ValidateEvent: React.FC<ValidateEventProps> = ({formatPayload, payloadErrors, useTextBox}) => {
   const request = useValidateEvent()
 
   return (
@@ -218,7 +280,7 @@ const ValidateEvent: React.FC<ValidateEventProps> = () => {
           heading="This event has not been validated"
           headingIcon={<Warning />}
           body={
-            <>
+            <Root>
               <Typography>
                 Update the event using the controls above.
               </Typography>
@@ -226,25 +288,41 @@ const ValidateEvent: React.FC<ValidateEventProps> = () => {
                 When you're done editing the event, click "Validate Event" to
                 check if the event is valid.
               </Typography>
-            </>
+            </Root>
           }
-          validateEvent={validateEvent}
+          validateEvent={ () => {
+              if (formatPayload) {
+                formatPayload()
+              }
+
+              validateEvent()
+            }
+          }
         />
       )}
       renderInProgress={() => (
         <Template heading="Validating" body={<Spinner ellipses />} />
       )}
-      renderFailed={({ validationMessages, validateEvent }) => (
+      renderFailed={({ validationMessages, validateEvent}) => (
         <Template
           error
           headingIcon={<ErrorIcon />}
           heading="Event is invalid"
           body=""
-          validateEvent={validateEvent}
+          validateEvent={ () => {
+              if (formatPayload) {
+                formatPayload()
+              }
+
+              validateEvent()
+            }
+          }
           validationMessages={validationMessages}
+          payloadErrors={payloadErrors}
+          useTextBox={useTextBox}
         />
       )}
-      renderSuccessful={({ sendToGA, copyPayload, copySharableLink, sent }) => (
+      renderSuccessful={({ sendToGA, copyPayload, copySharableLink, sent}) => (
         <Template
           sent={sent}
           valid
@@ -268,7 +346,7 @@ const ValidateEvent: React.FC<ValidateEventProps> = () => {
         />
       )}
     />
-  )
+  );
 }
 
 export default ValidateEvent

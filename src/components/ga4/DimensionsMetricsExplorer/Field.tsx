@@ -1,88 +1,42 @@
 import * as React from "react"
 
-import IconLink from "@material-ui/icons/Link"
-import makeStyles from "@material-ui/core/styles/makeStyles"
-import Typography from "@material-ui/core/Typography"
+import {styled} from '@mui/material/styles';
+
+import IconLink from "@mui/icons-material/Link"
+import Typography from "@mui/material/Typography"
 
 import InlineCode from "@/components/InlineCode"
-import { CopyIconButton } from "@/components/CopyButton"
+import {CopyIconButton} from "@/components/CopyButton"
 import ExternalLink from "@/components/ExternalLink"
-import { Dimension, Metric } from "./useDimensionsAndMetrics"
-import { QueryParam } from "."
-import { AccountSummary, PropertySummary } from "@/types/ga4/StreamPicker"
+import {Dimension, Metric} from "./useDimensionsAndMetrics"
+import {QueryParam} from "."
+import {AccountSummary, PropertySummary} from "@/types/ga4/StreamPicker"
 import LabeledCheckbox from "@/components/LabeledCheckbox"
-import { CompatibleHook } from "./useCompatibility"
+import {CompatibleHook} from "./useCompatibility"
+import Markdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
-const knownLinks: [string, JSX.Element][] = [
-  [
-    "<https://support.google.com/analytics/answer/9267568>",
-    <ExternalLink href="https://support.google.com/analytics/answer/9267568">
-      Set up and manage conversion events
-    </ExternalLink>,
-  ],
-  [
-    "<https://support.google.com/google-ads/answer/6323>",
-    <ExternalLink href="https://support.google.com/google-ads/answer/6323">
-      Keywords: Definition
-    </ExternalLink>,
-  ],
-  [
-    "<https://support.google.com/analytics/answer/9213390>",
-    <ExternalLink href="https://support.google.com/analytics/answer/9213390">
-      User-ID for cross-platform analysis
-    </ExternalLink>,
-  ],
-  [
-    "<https://support.google.com/analytics/answer/10108813>",
-    <ExternalLink href="https://support.google.com/analytics/answer/10108813">
-      Data filters
-    </ExternalLink>,
-  ],
-]
+const PREFIX = 'Field';
 
-const linkifyText = (
-  remainingString: string,
-  elements: (JSX.Element | string)[]
-): [string, (JSX.Element | string)[]] => {
-  const firstMatch = knownLinks.reduce(
-    (acc, [inText], idx) => {
-      const { matchIndex } = acc
-      const currentMatchIndex = remainingString.indexOf(inText)
-      if (currentMatchIndex !== -1) {
-        if (currentMatchIndex < matchIndex || matchIndex === -1) {
-          return {
-            matchIndex: currentMatchIndex,
-            knownLinksIndex: idx,
-          }
-        }
-      }
-      return acc
-    },
-    { knownLinksIndex: -1, matchIndex: -1 }
-  )
-  if (firstMatch.matchIndex === -1) {
-    elements.push(remainingString)
-    return ["", elements]
-  } else {
-    const [inText, link] = knownLinks[firstMatch.knownLinksIndex]
-    const before = remainingString.substring(0, firstMatch.matchIndex)
-    const after = remainingString.substring(
-      firstMatch.matchIndex + inText.length
-    )
-    elements.push(before)
-    elements.push(link)
-    return [after, elements]
+const classes = {
+  headingUIName: `${PREFIX}-headingUIName`,
+  heading: `${PREFIX}-heading`,
+  apiName: `${PREFIX}-apiName`
+};
+
+const Root = styled('div')((
+  {
+    theme
   }
-}
-
-const useStyles = makeStyles(theme => ({
-  headingUIName: {
+) => ({
+  [`& .${classes.headingUIName}`]: {
     marginRight: theme.spacing(1),
     "& > span": {
       fontSize: "inherit",
     },
   },
-  heading: {
+
+  [`& .${classes.heading}`]: {
     display: "flex",
     flexWrap: "wrap",
     alignItems: "center",
@@ -97,11 +51,12 @@ const useStyles = makeStyles(theme => ({
       },
     },
   },
-  apiName: {
+
+  [`& .${classes.apiName}`]: {
     margin: theme.spacing(0, 1),
     fontSize: "0.75em",
-  },
-}))
+  }
+}));
 
 interface FieldProps extends CompatibleHook {
   field:
@@ -112,7 +67,6 @@ interface FieldProps extends CompatibleHook {
 }
 
 const Field: React.FC<FieldProps> = props => {
-  const classes = useStyles()
 
   const {
     field,
@@ -143,27 +97,6 @@ const Field: React.FC<FieldProps> = props => {
     return `${baseURL}${search}#${apiName}`
   }, [field, apiName, account, property])
 
-  const withLinks = React.useMemo(() => {
-    let remainingText = description
-    let elements: (JSX.Element | string)[] = []
-    let mightHaveLinks = true
-    while (mightHaveLinks) {
-      const result = linkifyText(remainingText, elements)
-      remainingText = result[0]
-      elements = result[1]
-      if (remainingText === "") {
-        mightHaveLinks = false
-      }
-    }
-    return (
-      <>
-        {elements.map((e, idx) => (
-          <React.Fragment key={idx}>{e}</React.Fragment>
-        ))}
-      </>
-    )
-  }, [description])
-
   const isCompatible = React.useMemo(() => {
     return (
       incompatibleDimensions?.find(d => d.apiName === field.value.apiName) ===
@@ -193,30 +126,35 @@ const Field: React.FC<FieldProps> = props => {
   }, [checked, addDimension, addMetric, removeDimension, removeMetric, field])
 
   return (
-    <div id={apiName} key={apiName}>
-      <Typography variant="h4" className={classes.heading}>
-        {property === undefined ? (
-          uiName
-        ) : (
-          <LabeledCheckbox
-            className={classes.headingUIName}
-            checked={checked}
-            onChange={onChange}
-            disabled={!isCompatible}
-          >
-            {uiName}
-          </LabeledCheckbox>
-        )}
-        <InlineCode className={classes.apiName}>{apiName}</InlineCode>
-        <CopyIconButton
-          icon={<IconLink color="primary" />}
-          toCopy={link}
-          tooltipText={`Copy link to ${apiName}`}
-        />
-      </Typography>
-      <Typography>{withLinks}</Typography>
-    </div>
-  )
+      <>
+        {
+          <Root id={apiName} key={apiName}>
+            <Typography variant="h4" className={classes.heading}>
+              {property === undefined ? (
+                  uiName
+              ) : (
+                  <LabeledCheckbox
+                      className={classes.headingUIName}
+                      checked={checked}
+                      onChange={onChange}
+                      disabled={!isCompatible}
+                  >
+                    {uiName}
+                  </LabeledCheckbox>
+              )}
+              <InlineCode className={classes.apiName}>{apiName}</InlineCode>
+              <CopyIconButton
+                  icon={<IconLink color="primary"/>}
+                  toCopy={link}
+                  tooltipText={`Copy link to ${apiName}`}
+              />
+            </Typography>
+            <Typography><Markdown
+                remarkPlugins={[remarkGfm]}>{description}</Markdown></Typography>
+          </Root>
+        }
+      </>
+  );
 }
 
 export default Field
